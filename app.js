@@ -1,4 +1,5 @@
-const HF_TOKEN = "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"; 
+// Google AI Studio'dan olgan kalitingizni shu yerga qo'ying
+const GEMINI_API_KEY = "Sizning_Gemini_API_Keyingiz"; 
 
 async function chat() {
     const input = document.getElementById('userInput');
@@ -8,45 +9,33 @@ async function chat() {
     addMessage(text, 'u');
     input.value = "";
 
-    const load = addMessage("AI o'ylamoqda...", 'a');
+    const load = addMessage("Gemini o'ylamoqda...", 'a');
 
     try {
-        // CORS xatosini chetlab o'tish uchun Mistral-ni boshqa endpoint orqali chaqiramiz
-        const response = await fetch("https://api-inference.huggingface.co/models/Mistralai/Mistral-7B-Instruct-v0.2", {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${HF_TOKEN}`,
-                "Content-Type": "application/json",
-                // Ba'zan brauzerlar xavfsizlik uchun qo'shimcha headerlarni talab qiladi
+                "Content-Type": "application/json"
             },
-            body: JSON.stringify({ 
-                inputs: `<s>[INST] ${text} [/INST]`,
-                parameters: { 
-                    max_new_tokens: 500,
-                    return_full_text: false
-                },
-                options: { wait_for_model: true }
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: text }] }]
             })
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "API xatosi");
-        }
 
         const data = await response.json();
         load.remove();
 
-        if (data && data[0] && data[0].generated_text) {
-            addMessage(data[0].generated_text.trim(), 'a');
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+            let reply = data.candidates[0].content.parts[0].text;
+            addMessage(reply, 'a');
         } else {
-            addMessage("Xato: Noto'g'ri ma'lumot qaytdi.", 'a');
+            console.error("Xato tafsiloti:", data);
+            addMessage("Xato: Gemini javob bera olmadi.", 'a');
         }
     } catch (e) {
         if(load) load.remove();
-        // Konsolda CORS xatosi ko'rinsa, bu brauzer cheklovidir
-        addMessage("Xato: " + e.message, 'a');
-        console.error("Xato tafsiloti:", e);
+        addMessage("Ulanish xatosi! Internetni tekshiring.", 'a');
+        console.error("Fetch xatosi:", e);
     }
 }
 
